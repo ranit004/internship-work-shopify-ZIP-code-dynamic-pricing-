@@ -1,10 +1,11 @@
 {
-  "ratings": {
-    "stars": {
-      "label": "Ratings"
-    },
-    "home": {
-      "recommendationText": "Recommended Product!"
-    }
+  "zip_checker": {
+    "title": "Check Price for Your Location",
+    "label": "Enter your ZIP code",
+    "button": "Check Price",
+    "placeholder": "e.g. 75028",
+    "validation_error": "Please enter a valid 5-digit US ZIP code",
+    "network_error": "Unable to reach pricing service. Please try again.",
+    "last_checked": "Last checked: ZIP"
   }
 }
