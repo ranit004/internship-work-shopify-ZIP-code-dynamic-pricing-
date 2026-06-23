@@ -12,9 +12,9 @@
 
 ## 📹 Demo
 
-> *(Demo GIF coming soon — Loom recording in progress)*
+> *(Demo GIF)*
 >
-> ![Demo GIF placeholder](https://drive.google.com/drive/u/0/folders/1P5_d9tRflhvrb6gdUuSHW-IridJxEZl3)
+> (https://drive.google.com/drive/u/0/folders/1P5_d9tRflhvrb6gdUuSHW-IridJxEZl3)
 
 ---
 
