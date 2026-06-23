@@ -12,8 +12,6 @@
 
 ## 📹 Demo
 
-> *(Demo GIF)*
->
 > (https://drive.google.com/drive/u/0/folders/1P5_d9tRflhvrb6gdUuSHW-IridJxEZl3)
 
 ---
