@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "shopify-zip-pricing-api",
   "builds": [
     {
       "src": "src/index.js",

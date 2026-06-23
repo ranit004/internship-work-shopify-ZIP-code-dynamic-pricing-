@@ -2,7 +2,9 @@
 
 [![Node Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FYOUR_USERNAME%2Fshopify-zip-pricing)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Franit004%2Finternship-work-shopify-ZIP-code-dynamic-pricing-)
+
+**Live API:** https://shopify-zip-pricing-api.vercel.app
 
 > A **Shopify Theme App Extension + Node.js API** that delivers real-time, location-based pricing on product pages — built end-to-end in under 2 hours using AI-assisted development.
 
