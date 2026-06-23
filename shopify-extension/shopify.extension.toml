@@ -1,0 +1,10 @@
+name = "zip-price-checker"
+handle = "zip-price-checker"
+
+[[extensions]]
+type = "theme"
+name = "ZIP Price Checker"
+handle = "zip-price-checker"
+
+[extensions.development]
+  root_url = "http://localhost:3001"

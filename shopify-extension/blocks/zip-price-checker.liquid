@@ -1,0 +1,484 @@
+{% comment %}
+  ZIP Code Price Checker — Shopify Theme App Extension Block
+  Block: blocks/zip-price-checker.liquid
+  Supports Dawn and any Shopify 2.0 theme.
+  Includes: real-time validation, auto-submit on 5 digits, skeleton loading,
+            fade-in animation, last-checked memory, full accessibility (aria-live).
+{% endcomment %}
+
+{% assign block_id = block.id | replace: '_', '-' %}
+{% assign section_title = block.settings.section_title | default: 'Check Price for Your Location' %}
+{% assign backend_url   = block.settings.backend_url   | default: 'https://your-api.vercel.app' %}
+
+<div
+  id="zip-checker-{{ block_id }}"
+  class="zip-checker"
+  data-backend-url="{{ backend_url | escape }}"
+  data-product-id="{{ product.id | prepend: 'gid://shopify/Product/' }}"
+  {{ block.shopify_attributes }}
+>
+  <h2 class="zip-checker__title">{{ section_title }}</h2>
+
+  <div class="zip-checker__form" role="group" aria-labelledby="zip-checker-label-{{ block_id }}">
+    <label
+      id="zip-checker-label-{{ block_id }}"
+      class="zip-checker__label"
+      for="zip-input-{{ block_id }}"
+    >
+      Enter your ZIP code
+    </label>
+
+    <div class="zip-checker__input-row">
+      <div class="zip-checker__input-wrap">
+        <input
+          id="zip-input-{{ block_id }}"
+          class="zip-checker__input"
+          type="text"
+          inputmode="numeric"
+          pattern="[0-9]{5}"
+          maxlength="5"
+          placeholder="e.g. 75028"
+          aria-label="5-digit US ZIP code"
+          aria-describedby="zip-validation-{{ block_id }}"
+          autocomplete="postal-code"
+        />
+        <span
+          id="zip-indicator-{{ block_id }}"
+          class="zip-checker__indicator"
+          aria-hidden="true"
+        ></span>
+      </div>
+
+      <button
+        id="zip-btn-{{ block_id }}"
+        class="zip-checker__btn"
+        type="button"
+        disabled
+      >
+        Check Price
+      </button>
+    </div>
+
+    <p
+      id="zip-validation-{{ block_id }}"
+      class="zip-checker__validation-msg"
+      role="alert"
+      aria-live="polite"
+    ></p>
+  </div>
+
+  <!-- Skeleton loader -->
+  <div id="zip-skeleton-{{ block_id }}" class="zip-checker__skeleton" hidden aria-hidden="true">
+    <div class="zip-checker__skeleton-line zip-checker__skeleton-line--wide"></div>
+    <div class="zip-checker__skeleton-line zip-checker__skeleton-line--narrow"></div>
+  </div>
+
+  <!-- Result area -->
+  <div
+    id="zip-result-{{ block_id }}"
+    class="zip-checker__result"
+    role="region"
+    aria-live="polite"
+    aria-label="Price result"
+    hidden
+  >
+    <p class="zip-checker__price" id="zip-price-{{ block_id }}"></p>
+    <p class="zip-checker__last-checked" id="zip-last-{{ block_id }}"></p>
+  </div>
+
+  <!-- Error area -->
+  <div
+    id="zip-error-{{ block_id }}"
+    class="zip-checker__error"
+    role="alert"
+    aria-live="assertive"
+    hidden
+  ></div>
+</div>
+
+{%- comment -%} ─────────── STYLES ─────────────────────────────────────────── {%- endcomment -%}
+<style>
+  /* ── Custom Properties ── */
+  .zip-checker {
+    --zc-accent:       #0071e3;
+    --zc-accent-hover: #0051a2;
+    --zc-success:      #28a745;
+    --zc-error:        #dc3545;
+    --zc-border:       #d1d5db;
+    --zc-border-focus: #0071e3;
+    --zc-bg:           #f9fafb;
+    --zc-text:         #111827;
+    --zc-muted:        #6b7280;
+    --zc-radius:       8px;
+    --zc-transition:   0.22s ease;
+
+    font-family: inherit;
+    color: var(--zc-text);
+    padding: 24px;
+    background: var(--zc-bg);
+    border: 1px solid var(--zc-border);
+    border-radius: var(--zc-radius);
+    margin-block: 24px;
+    max-width: 480px;
+  }
+
+  /* ── Title ── */
+  .zip-checker__title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 16px;
+    color: var(--zc-text);
+  }
+
+  /* ── Label ── */
+  .zip-checker__label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--zc-muted);
+  }
+
+  /* ── Input Row ── */
+  .zip-checker__input-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .zip-checker__input-wrap {
+    position: relative;
+    flex: 1;
+  }
+
+  .zip-checker__input {
+    width: 100%;
+    padding: 10px 36px 10px 12px;
+    border: 1.5px solid var(--zc-border);
+    border-radius: var(--zc-radius);
+    font-size: 1rem;
+    background: #fff;
+    color: var(--zc-text);
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color var(--zc-transition), box-shadow var(--zc-transition);
+  }
+
+  .zip-checker__input:focus {
+    border-color: var(--zc-border-focus);
+    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+  }
+
+  .zip-checker__input.is-valid   { border-color: var(--zc-success); }
+  .zip-checker__input.is-invalid { border-color: var(--zc-error); }
+
+  /* ── Checkmark / X Indicator ── */
+  .zip-checker__indicator {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    pointer-events: none;
+    transition: opacity var(--zc-transition);
+  }
+
+  /* ── Button ── */
+  .zip-checker__btn {
+    padding: 10px 18px;
+    background: var(--zc-accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--zc-radius);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--zc-transition), opacity var(--zc-transition);
+  }
+
+  .zip-checker__btn:hover:not(:disabled) { background: var(--zc-accent-hover); }
+  .zip-checker__btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  /* ── Validation Msg ── */
+  .zip-checker__validation-msg {
+    font-size: 0.8125rem;
+    margin: 6px 0 0;
+    min-height: 1.25em;
+    color: var(--zc-error);
+    transition: opacity var(--zc-transition);
+  }
+
+  /* ── Skeleton Loader ── */
+  .zip-checker__skeleton {
+    margin-top: 16px;
+  }
+
+  .zip-checker__skeleton-line {
+    height: 18px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+    background-size: 200% 100%;
+    animation: zc-shimmer 1.4s infinite;
+    margin-bottom: 10px;
+  }
+
+  .zip-checker__skeleton-line--wide   { width: 75%; }
+  .zip-checker__skeleton-line--narrow { width: 45%; }
+
+  @keyframes zc-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ── Result ── */
+  .zip-checker__result {
+    margin-top: 16px;
+    animation: zc-fadein 0.35s ease both;
+  }
+
+  @keyframes zc-fadein {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .zip-checker__price {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--zc-text);
+    margin: 0 0 6px;
+  }
+
+  .zip-checker__last-checked {
+    font-size: 0.8125rem;
+    color: var(--zc-muted);
+    margin: 0;
+  }
+
+  /* ── Error ── */
+  .zip-checker__error {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: var(--zc-radius);
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: var(--zc-error);
+    font-size: 0.875rem;
+    animation: zc-fadein 0.25s ease both;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 480px) {
+    .zip-checker__input-row { flex-direction: column; }
+    .zip-checker__btn       { width: 100%; }
+  }
+</style>
+
+{%- comment -%} ─────────── JAVASCRIPT ──────────────────────────────────────── {%- endcomment -%}
+<script>
+(function () {
+  'use strict';
+
+  /** Grab elements scoped to this block instance */
+  const ROOT       = document.getElementById('zip-checker-{{ block_id }}');
+  if (!ROOT) return;
+
+  const BACKEND    = ROOT.dataset.backendUrl;
+  const PRODUCT_ID = ROOT.dataset.productId;
+  const input      = ROOT.querySelector('#zip-input-{{ block_id }}');
+  const btn        = ROOT.querySelector('#zip-btn-{{ block_id }}');
+  const indicator  = ROOT.querySelector('#zip-indicator-{{ block_id }}');
+  const validMsg   = ROOT.querySelector('#zip-validation-{{ block_id }}');
+  const skeleton   = ROOT.querySelector('#zip-skeleton-{{ block_id }}');
+  const resultEl   = ROOT.querySelector('#zip-result-{{ block_id }}');
+  const priceEl    = ROOT.querySelector('#zip-price-{{ block_id }}');
+  const lastEl     = ROOT.querySelector('#zip-last-{{ block_id }}');
+  const errorEl    = ROOT.querySelector('#zip-error-{{ block_id }}');
+
+  /** Regex for exactly 5 numeric digits */
+  const ZIP_RE = /^\d{5}$/;
+
+  /** Debounce timer reference */
+  let debounceTimer = null;
+
+  /** Whether a fetch is in-flight (prevents double-submit) */
+  let isFetching = false;
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  /** Show skeleton, hide result and error */
+  function showSkeleton() {
+    skeleton.hidden  = false;
+    skeleton.removeAttribute('aria-hidden');
+    resultEl.hidden  = true;
+    errorEl.hidden   = true;
+    btn.disabled     = true;
+    console.log('[ZipChecker] Loading price…');
+  }
+
+  /** Hide skeleton */
+  function hideSkeleton() {
+    skeleton.hidden = true;
+    skeleton.setAttribute('aria-hidden', 'true');
+  }
+
+  /** Display a successful price result */
+  function showResult(data) {
+    hideSkeleton();
+    errorEl.hidden = true;
+
+    // Re-trigger animation by cloning
+    const fresh = resultEl.cloneNode(true);
+    resultEl.replaceWith(fresh);
+    const liveResult = ROOT.querySelector('#zip-result-{{ block_id }}');
+
+    liveResult.querySelector('#zip-price-{{ block_id }}').textContent =
+      data.found
+        ? `Price for ${data.zipCode}: ${data.label}`
+        : `Standard price for ${data.zipCode}: ${data.label}`;
+
+    liveResult.querySelector('#zip-last-{{ block_id }}').textContent =
+      `Last checked: ZIP ${data.zipCode}`;
+
+    liveResult.hidden = false;
+    btn.disabled = false;
+    console.log('[ZipChecker] Price received:', data);
+  }
+
+  /** Display an error message */
+  function showError(msg) {
+    hideSkeleton();
+    resultEl.hidden = true;
+    errorEl.textContent = msg;
+    errorEl.hidden = false;
+    btn.disabled = false;
+    console.warn('[ZipChecker] Error:', msg);
+  }
+
+  /** Validate current input value; returns true if valid */
+  function validateInput(value) {
+    if (!value) {
+      input.classList.remove('is-valid', 'is-invalid');
+      indicator.textContent = '';
+      validMsg.textContent = '';
+      btn.disabled = true;
+      return false;
+    }
+
+    const valid = ZIP_RE.test(value);
+
+    input.classList.toggle('is-valid',   valid);
+    input.classList.toggle('is-invalid', !valid);
+    indicator.textContent = valid ? '✓' : '✕';
+    indicator.style.color = valid ? 'var(--zc-success)' : 'var(--zc-error)';
+    validMsg.textContent  = valid ? '' : 'Please enter a valid 5-digit US ZIP code';
+    btn.disabled = !valid || isFetching;
+
+    return valid;
+  }
+
+  // ── API Call ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Fetches the price for the current ZIP from the backend.
+   * @param {string} zipCode - Validated 5-digit ZIP
+   */
+  async function fetchPrice(zipCode) {
+    if (isFetching) return;
+    isFetching = true;
+    showSkeleton();
+
+    try {
+      const response = await fetch(`${BACKEND}/api/price-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zipCode, productId: PRODUCT_ID }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.found) {
+        // Unknown ZIP — show fallback price with a notice
+        showResult(data);
+        const liveResult = ROOT.querySelector('#zip-result-{{ block_id }}');
+        liveResult.querySelector('#zip-price-{{ block_id }}').textContent =
+          `Pricing not available for ZIP ${data.zipCode}. Showing standard price: ${data.label}`;
+      } else {
+        showResult(data);
+      }
+    } catch (err) {
+      const isNetwork = err instanceof TypeError;
+      showError(
+        isNetwork
+          ? 'Unable to reach pricing service. Please try again.'
+          : `Error: ${err.message}`
+      );
+    } finally {
+      isFetching = false;
+      btn.disabled = !ZIP_RE.test(input.value);
+    }
+  }
+
+  // ── Event Listeners ──────────────────────────────────────────────────────────
+
+  /** Real-time validation + auto-submit on 5 valid digits */
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const value = input.value.trim();
+    const valid = validateInput(value);
+
+    if (valid) {
+      // Auto-submit after 400 ms debounce
+      debounceTimer = setTimeout(() => fetchPrice(value), 400);
+    }
+  });
+
+  /** Explicit button click */
+  btn.addEventListener('click', () => {
+    clearTimeout(debounceTimer);
+    const value = input.value.trim();
+    if (validateInput(value)) fetchPrice(value);
+  });
+
+  /** Keyboard: Enter inside input triggers submit */
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      clearTimeout(debounceTimer);
+      const value = input.value.trim();
+      if (validateInput(value)) fetchPrice(value);
+    }
+  });
+})();
+</script>
+
+{% schema %}
+{
+  "name": "ZIP Price Checker",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "backend_url",
+      "label": "Backend API URL",
+      "default": "https://your-api.vercel.app",
+      "info": "The base URL of your deployed pricing API (no trailing slash)"
+    },
+    {
+      "type": "text",
+      "id": "section_title",
+      "label": "Section Title",
+      "default": "Check Price for Your Location"
+    }
+  ],
+  "presets": [
+    {
+      "name": "ZIP Price Checker"
+    }
+  ]
+}
+{% endschema %}
