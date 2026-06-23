@@ -1,10 +1,21 @@
+# Dependencies
 node_modules/
+
+# Environment secrets
 .env
+.env.local
+
+# Build outputs
 dist/
-.vercel/
 coverage/
+
+# Vercel
+.vercel/
+
+# Logs
 *.log
+npm-debug.log*
+
+# OS
 .DS_Store
 Thumbs.db
-
-.vercel
