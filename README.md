@@ -14,7 +14,7 @@
 
 > *(Demo GIF coming soon — Loom recording in progress)*
 >
-> ![Demo GIF placeholder](https://via.placeholder.com/800x450.png?text=Demo+GIF+coming+soon)
+> ![Demo GIF placeholder](https://drive.google.com/drive/u/0/folders/1P5_d9tRflhvrb6gdUuSHW-IridJxEZl3)
 
 ---
 
