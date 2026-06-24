@@ -7,7 +7,6 @@ application_url = "https://shopify.dev/apps/default-app-home"
 embedded = true
 
 [build]
-include_config_on_deploy = true
 automatically_update_urls_on_dev = true
 
 [webhooks]
@@ -22,3 +21,12 @@ scopes = "read_products"
 
 [auth]
 redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
+
+# ── App Proxy ──────────────────────────────────────────────────────────────────
+# Shopify routes requests from <shop>.myshopify.com/apps/zip-pricing/*
+# to the url below, appending HMAC query params for verification.
+# Replace the URL with your actual Vercel deployment URL.
+[app_proxy]
+url = "https://internship-work-shopify-zip-code-dynamic-pricing.vercel.app/api/proxy"
+subpath = "zip-pricing"
+prefix = "apps"

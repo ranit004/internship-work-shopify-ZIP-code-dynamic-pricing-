@@ -4,16 +4,18 @@
   Supports Dawn and any Shopify 2.0 theme.
   Includes: real-time validation, auto-submit on 5 digits, skeleton loading,
             fade-in animation, last-checked memory, full accessibility (aria-live).
+
+  Security: requests are routed through the Shopify App Proxy at
+  /apps/zip-pricing, which prepends a verified HMAC signature before
+  forwarding to the Vercel backend — eliminating direct API exposure.
 {% endcomment %}
 
 {% assign block_id = block.id | replace: '_', '-' %}
 {% assign section_title = block.settings.section_title | default: 'Check Price for Your Location' %}
-{% assign backend_url   = block.settings.backend_url   | default: 'https://your-api.vercel.app' %}
 
 <div
   id="zip-checker-{{ block_id }}"
   class="zip-checker"
-  data-backend-url="{{ backend_url | escape }}"
   data-product-id="{{ product.id | prepend: 'gid://shopify/Product/' }}"
   {{ block.shopify_attributes }}
 >
@@ -279,11 +281,17 @@
 (function () {
   'use strict';
 
+  /**
+   * App Proxy base path — always same-domain, so no CORS headers needed.
+   * Shopify intercepts /apps/zip-pricing/* and forwards the request to
+   * our Vercel backend with a verified HMAC signature appended.
+   */
+  const PROXY_BASE = '/apps/zip-pricing';
+
   /** Grab elements scoped to this block instance */
   const ROOT       = document.getElementById('zip-checker-{{ block_id }}');
   if (!ROOT) return;
 
-  const BACKEND    = ROOT.dataset.backendUrl;
   const PRODUCT_ID = ROOT.dataset.productId;
   const input      = ROOT.querySelector('#zip-input-{{ block_id }}');
   const btn        = ROOT.querySelector('#zip-btn-{{ block_id }}');
@@ -380,7 +388,13 @@
   // ── API Call ─────────────────────────────────────────────────────────────────
 
   /**
-   * Fetches the price for the current ZIP from the backend.
+   * Fetches the price for the current ZIP via the Shopify App Proxy.
+   *
+   * Why GET instead of POST?
+   * Shopify App Proxy always forwards as GET. The ZIP code and product ID
+   * are passed as query-string params. The backend validates the HMAC
+   * signature Shopify adds, proving the request came through the proxy.
+   *
    * @param {string} zipCode - Validated 5-digit ZIP
    */
   async function fetchPrice(zipCode) {
@@ -389,10 +403,16 @@
     showSkeleton();
 
     try {
-      const response = await fetch(`${BACKEND}/api/price-check`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zipCode, productId: PRODUCT_ID }),
+      // Build the App Proxy URL — same domain, no CORS needed
+      const params = new URLSearchParams({
+        zipCode,
+        productId: PRODUCT_ID,
+      });
+      const url = `${PROXY_BASE}/price-check?${params.toString()}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
       });
 
       if (!response.ok) {
@@ -461,13 +481,6 @@
   "name": "ZIP Price Checker",
   "target": "section",
   "settings": [
-    {
-      "type": "text",
-      "id": "backend_url",
-      "label": "Backend API URL",
-      "default": "https://shopify-zip-pricing-api.vercel.app",
-      "info": "The base URL of your deployed pricing API (no trailing slash)"
-    },
     {
       "type": "text",
       "id": "section_title",
